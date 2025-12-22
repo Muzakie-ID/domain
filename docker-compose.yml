@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: subdomain_app
+    ports:
+      - "8084:80"
+    environment:
+      - DB_HOST=mysql_db
+      - DB_USER=root
+      - DB_PASS=root  # Sesuaikan dengan password database Anda
+      - DB_NAME=subdomain_manager
+    networks:
+      - master_db_shared
+    volumes:
+      - .:/var/www/html
+
+networks:
+  master_db_shared:
+    external: true
