@@ -53,7 +53,7 @@ $domains = $pdo->query("SELECT * FROM domains ORDER BY name ASC")->fetchAll(PDO:
                             $sql = "SELECT s.*, d.name as domain_name 
                                     FROM subdomains s 
                                     JOIN domains d ON s.domain_id = d.id 
-                                    ORDER BY s.id DESC";
+                                    ORDER BY s.port ASC";
                             $stmt = $pdo->query($sql);
                             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                                 $full_url = "http://" . $row['sub_name'] . "." . $row['domain_name'];
