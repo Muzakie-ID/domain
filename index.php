@@ -30,9 +30,14 @@ $domains = $pdo->query("SELECT * FROM domains ORDER BY name ASC")->fetchAll(PDO:
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h4>Daftar Subdomain & Port</h4>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#subdomainModal" onclick="resetForm()">
-                <i class="bi bi-plus-lg"></i> Tambah Subdomain
-            </button>
+            <div class="gap-2 d-flex">
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#nginxImportModal">
+                    <i class="bi bi-upload"></i> Import Nginx
+                </button>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#subdomainModal" onclick="resetForm()">
+                    <i class="bi bi-plus-lg"></i> Tambah Subdomain
+                </button>
+            </div>
         </div>
 
         <div class="card shadow-sm">
@@ -130,9 +135,40 @@ $domains = $pdo->query("SELECT * FROM domains ORDER BY name ASC")->fetchAll(PDO:
         </div>
     </div>
 
+    <!-- Modal Nginx Import -->
+    <div class="modal fade" id="nginxImportModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Import dari Nginx Config</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Paste Nginx Config Block</label>
+                        <textarea id="nginxConfig" class="form-control" rows="8" placeholder="server {&#10;    server_name aapanel.muzakie.my.id;&#10;    proxy_pass http://127.0.0.1:8887;&#10;}"></textarea>
+                    </div>
+                    <div id="parseResult" class="d-none">
+                        <div class="alert alert-info">
+                            <strong>Data Terdeteksi:</strong><br>
+                            Domain: <span id="resultDomain" class="badge bg-primary"></span><br>
+                            Subdomain: <span id="resultSub" class="badge bg-success"></span><br>
+                            Port: <span id="resultPort" class="badge bg-warning"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary" onclick="parseNginxConfig()">Parse & Import</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const modal = new bootstrap.Modal(document.getElementById('subdomainModal'));
+        const nginxModal = new bootstrap.Modal(document.getElementById('nginxImportModal'));
 
         function resetForm() {
             document.getElementById('modalTitle').innerText = 'Tambah Subdomain';
@@ -152,6 +188,58 @@ $domains = $pdo->query("SELECT * FROM domains ORDER BY name ASC")->fetchAll(PDO:
             document.getElementById('description').value = data.description;
             
             modal.show();
+        }
+
+        function parseNginxConfig() {
+            const nginxText = document.getElementById('nginxConfig').value;
+            
+            // Extract server_name (e.g., aapanel.muzakie.my.id)
+            const serverNameMatch = nginxText.match(/server_name\s+([^;]+)/);
+            const serverName = serverNameMatch ? serverNameMatch[1].trim() : '';
+            
+            // Extract proxy_pass (e.g., http://127.0.0.1:8887)
+            const proxyPassMatch = nginxText.match(/proxy_pass\s+http:\/\/[^:]+:(\d+)/);
+            const port = proxyPassMatch ? proxyPassMatch[1] : '';
+            
+            if (!serverName || !port) {
+                alert('Tidak bisa parse config. Pastikan ada server_name dan proxy_pass dengan port.');
+                return;
+            }
+            
+            // Split domain dan subdomain
+            const parts = serverName.split('.');
+            if (parts.length < 2) {
+                alert('Format server_name tidak valid. Contoh: aapanel.muzakie.my.id');
+                return;
+            }
+            
+            const subName = parts[0];
+            const domain = parts.slice(1).join('.');
+            
+            // Show result
+            document.getElementById('resultDomain').innerText = domain;
+            document.getElementById('resultSub').innerText = subName;
+            document.getElementById('resultPort').innerText = port;
+            document.getElementById('parseResult').classList.remove('d-none');
+            
+            // Auto fill form after 1 second
+            setTimeout(() => {
+                resetForm();
+                document.getElementById('sub_name').value = subName;
+                document.getElementById('port').value = port;
+                
+                // Find and select domain
+                const domainSelect = document.getElementById('domain_id');
+                for (let i = 0; i < domainSelect.options.length; i++) {
+                    if (domainSelect.options[i].text === domain) {
+                        domainSelect.value = domainSelect.options[i].value;
+                        break;
+                    }
+                }
+                
+                nginxModal.hide();
+                modal.show();
+            }, 1000);
         }
 
         document.getElementById('domain_id').addEventListener('change', function() {
