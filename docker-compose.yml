@@ -12,10 +12,10 @@ services:
       - DB_PASS=root  # Sesuaikan dengan password database Anda
       - DB_NAME=subdomain_manager
     networks:
-      - db_master_shared
+      - master_db_shared
     volumes:
       - .:/var/www/html
 
 networks:
-  db_master_shared:
+  master_db_shared:
     external: true
